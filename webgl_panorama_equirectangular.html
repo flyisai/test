@@ -57,7 +57,7 @@
 				geometry.applyMatrix( new THREE.Matrix4().makeScale( -1, 1, 1 ) );
 
 				var material = new THREE.MeshBasicMaterial( {
-					map: THREE.ImageUtils.loadTexture( 'textures/test5.jpg' ),
+					map: THREE.ImageUtils.loadTexture( 'textures/test4.jpg' )
 					//overdraw: true //remove wireframe outline
 				} );
 
@@ -89,7 +89,7 @@
 				console.log(mesh);
 				console.log(scene);
 projector = new THREE.Projector();
-				renderer = new THREE.CanvasRenderer()//.WebGLRenderer();
+				renderer = new THREE.WebGLRenderer();//.CanvasRenderer()
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				container.appendChild( renderer.domElement );
 
@@ -143,6 +143,13 @@ projector = new THREE.Projector();
 
 			}
 
+            function onDocumentTouchStart() {
+                event.preventDefault();
+
+                var touch = event.touches;
+                alert(touch);
+            }
+
 			function onWindowResize() {
 
 				camera.aspect = window.innerWidth / window.innerHeight;
@@ -180,28 +187,6 @@ console.log(intersects[0].faceIndex)
 					}
 				}
 			}
-
-function castScreenToSphere(event) {
-        var mouse3D = new THREE.Vector3();
-        mouse3D.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse3D.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        mouse3D.z = 0.5;
-        projector.unprojectVector(mouse3D, camera);
-        var ray = new THREE.Raycaster(camera.position, mouse3D.sub(camera.position).normalize());
-        var res = ray.intersectObject(mesh);
-        return res;
-    }
-    function MarkAnotation(anot) {
-
-        var ballTexture = THREE.ImageUtils.loadTexture('textures/orange.png');
-
-        var ballMaterial = new THREE.SpriteMaterial({ map: ballTexture });
-        var ballSprite = new THREE.Sprite(ballMaterial);
-        ballSprite.scale.set(16, 16, 0.5);
-        ballSprite.position.set(anot.x, anot.y, anot.z);
-        //ballSprite.position.multiplyScalar(0.9);
-        scene.add(ballSprite);
-    }
 
 			function onDocumentMouseMove( event ) {
 
