@@ -49,7 +49,9 @@
 				geometry.applyMatrix( new THREE.Matrix4().makeScale( -1, 1, 1 ) );
 
 				var material = new THREE.MeshBasicMaterial( {
-					map: THREE.ImageUtils.loadTexture( 'textures/test8.jpg' )
+					map: THREE.ImageUtils.loadTexture( 'textures/test8.jpg' ),
+                    wireframe: true,
+                    wireframeLinewidth: 2
 				} );
 
 				mesh = new THREE.Mesh( geometry, material );
