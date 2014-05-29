@@ -6,7 +6,7 @@
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
 			body {
-				background-color: #000000;
+				background-color: #FFF;
 				margin: 0;
 				overflow: hidden;
 			}
@@ -16,11 +16,14 @@
 
 		<div id="container"></div>
 
-		<script src="three.min.js"></script>
+		<script src="three.r60.min.js"></script>
+        <script src="jquery1.7.2.min.js"></script>
 
 		<script>
 
 			var camera, scene, renderer;
+
+            var objects=[];
 
 			var texture_placeholder,
 			isUserInteracting = false,
@@ -28,11 +31,20 @@
 			lat = 0, onMouseDownLat = 0,
 			phi = 0, theta = 0;
 
-            var touchX, touchY, touchPrevX, touchPrevY, clockwise=true,
-            fingerOneTouchX, fingerOneTouchY, fingerTwoTouchX, fingerTwoTouchY;
+            var touchX, touchY, touchPrevX, touchPrevY, clockwise=true, bDone = true;
 
-			init();
-			animate();
+            $(function(){
+                init();
+                animate();
+                $(window).blur(function(){
+                    isUserInteracting = true;
+                });
+                $(window).focus(function(){
+                    isUserInteracting = false;
+                })
+            });
+
+
 
 			function init() {
 
@@ -49,14 +61,13 @@
 				geometry.applyMatrix( new THREE.Matrix4().makeScale( -1, 1, 1 ) );
 
 				var material = new THREE.MeshBasicMaterial( {
-					map: THREE.ImageUtils.loadTexture( 'textures/test8.jpg' ),
-                    wireframe: true,
-                    wireframeLinewidth: 2
+					map: THREE.ImageUtils.loadTexture( 'textures/test8.jpg' )
 				} );
 
 				mesh = new THREE.Mesh( geometry, material );
 				
 				scene.add( mesh );
+                objects.push(mesh);
 
 				renderer = new THREE.WebGLRenderer();
 				renderer.setSize( window.innerWidth, window.innerHeight );
@@ -64,45 +75,12 @@
 
 				//
 
-				document.addEventListener( 'dragover', function ( event ) {
-
-					event.preventDefault();
-					event.dataTransfer.dropEffect = 'copy';
-
-				}, false );
-
-				document.addEventListener( 'dragenter', function ( event ) {
-
-					document.body.style.opacity = 0.5;
-
-				}, false );
-
-				document.addEventListener( 'dragleave', function ( event ) {
-
-					document.body.style.opacity = 1;
-
-				}, false );
-
-				document.addEventListener( 'drop', function ( event ) {
-
-					event.preventDefault();
-
-					var reader = new FileReader();
-					reader.addEventListener( 'load', function ( event ) {
-
-						material.map.image.src = event.target.result;
-						material.map.needsUpdate = true;
-
-					}, false );
-					reader.readAsDataURL( event.dataTransfer.files[ 0 ] );
-
-					document.body.style.opacity = 1;
-
-				}, false );
-
                 document.addEventListener( 'touchstart', onDocumentTouchStart, false );
                 document.addEventListener( 'touchmove', onDocumentTouchMove, false );
                 document.addEventListener( 'touchend', onDocumentTouchEnd, false );
+
+                document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+
 				//
 
 				window.addEventListener( 'resize', onWindowResize, false );
@@ -115,32 +93,60 @@
 
                 isUserInteracting = true;
 
-                var touch = event.touches[0];
+                var touch = event.touches;
 
-                touchX = touchPrevX = fingerOneTouchX = touch.screenX;
-                touchY = touchPrevY = touch.screenY;
+                touchX = touchPrevX = getLeftPoint(touch).X;
+                touchY = touchPrevY = getLeftPoint(touch).Y;
+
+                var mouse3D = new THREE.Vector3( ( event.clientX / window.innerWidth ) * 2 - 1,   //x
+                                -( event.clientY / window.innerHeight ) * 2 + 1,  //y
+                        0.5 );                                            //z
+                var projector = new THREE.Projector();
+                var rayCaster = projector.pickingRay( mouse3D.clone(), camera );
+                var intersects = rayCaster.intersectObjects( objects );
+
+                // Get faceIndex of sphere
+                var faceIndex = intersects[0].faceIndex;
+                alert(faceIndex)
+
+                //BBVA One
+                //var row = 11, column = 8, start=1508;
+                //clickFaceIndex(faceIndex, start, row, column, function(){test('BBVA One')});
+
+                //BBVA Two
+                //start = 1278; column = 14; row = 16;
+                //clickFaceIndex(faceIndex, start, row, column, function(){test('BBVA Two')});
+
+                //RESTAURANT
+                //start = 1658; column = 8; row = 12;
+                //clickFaceIndex(faceIndex, start, row, column, function(){test('RESTAURANT')});
+
+                //People
+                //start = 2268; column = 20; row = 8;
+                //clickFaceIndex(faceIndex, start, row, column, function(){test('People')});
             }
 
             function onDocumentTouchMove(event) {
 
                 event.preventDefault();
 
-                var fingers = event.touches.length;
-                var touch = event.touches[0];
+                var touch = event.touches;
 
-                switch (fingers) {
+                switch (touch.length) {
                     case 1:
 
-                        lon -= (touch.screenX - touchX) * 0.1;
-                        lat += (touch.screenY - touchY) * 0.1;
+                        if(!bDone) break;
 
-                        touchX = touch.screenX;
-                        touchY = touch.screenY;
+                        lon -= (touch[0].screenX - touchX) * 0.1;
+                        lat += (touch[0].screenY - touchY) * 0.1;
+
+                        touchX = touch[0].screenX;
+                        touchY = touch[0].screenY;
                         break;
 
                     case 2:
-                        touchX = touch.screenX;
-                        var diff = touch.screenX - fingerOneTouchX;
+
+                        var diff = getLeftPoint(touch).X - touchPrevX;
 
                         if (camera.fov <= 90 && diff > 5) {
                             camera.fov += 1;
@@ -150,11 +156,11 @@
                         camera.updateProjectionMatrix();
                         break;
                 }
-
             }
 
             function onDocumentTouchEnd(event) {
-                //touchX<touchPrevX == true ? clockwise = true : clockwise = false;
+                event.touches.length == 1 ? bDone = false : bDone = true;
+                touchX<touchPrevX == true ? clockwise = true : clockwise = false;
                 isUserInteracting = false;
             }
 
@@ -195,6 +201,108 @@
 				renderer.render( scene, camera );
 
 			}
+
+            function getLeftPoint(touches) {
+                var i=0, arrX=[], arrY=[], result={};
+
+                for(;i<touches.length;i++) {
+                    arrX.push(touches[i].screenX);
+                    arrY.push(touches[i].screenY);
+                }
+                result.X = Math.min.apply(null,arrX);
+                result.Y = Math.min.apply(null,arrY);
+                return result;
+            }
+
+            function onDocumentMouseDown( event ) {
+
+                event.preventDefault();
+
+                document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+                document.addEventListener( 'mouseup', onDocumentMouseUp, false );
+
+
+                var mouse3D = new THREE.Vector3( ( event.clientX / window.innerWidth ) * 2 - 1,   //x
+                                -( event.clientY / window.innerHeight ) * 2 + 1,  //y
+                        0.5 );                                            //z
+                var projector = new THREE.Projector();
+                var rayCaster = projector.pickingRay( mouse3D.clone(), camera );
+                var intersects = rayCaster.intersectObjects( objects );
+
+                // Get faceIndex of sphere
+                var faceIndex = intersects[0].faceIndex;
+
+                //BBVA One
+                var row = 11, column = 8, start=1508;
+                clickFaceIndex(faceIndex, start, row, column, function(){test('BBVA One')});
+
+                //BBVA Two
+                start = 1278; column = 14; row = 16;
+                clickFaceIndex(faceIndex, start, row, column, function(){test('BBVA Two')});
+
+                //RESTAURANT
+                start = 1658; column = 8; row = 12;
+                clickFaceIndex(faceIndex, start, row, column, function(){test('RESTAURANT')});
+
+                //People
+                start = 2268; column = 20; row = 8;
+                clickFaceIndex(faceIndex, start, row, column, function(){test('People')});
+            }
+
+            function test(){
+                alert(arguments[0]);
+            }
+
+            function clickFaceIndex(faceIndex, start, row, column, callback){
+                var arr=[], index;
+                for (var j=0;j<row;j++){
+                    for(var k=0;k<column;k++){
+                        arr.push(start++);
+                    }
+                    start += 120 - column;
+                }
+
+                index = binarySearch(arr,faceIndex);
+
+                if(index>0){
+                    callback();
+                }
+            }
+
+            function binarySearch(datas, key) {
+                var index = -1;
+                var low = 0;
+                var high = datas.length - 1;
+                while (low <= high) {
+                    var middle = (low + high) >> 1;
+                    if (key == datas[middle]) {
+                        index = middle;
+                        break;
+                    } else if (key > datas[middle]) {
+                        low = middle + 1;
+                    } else if (key < datas[middle]) {
+                        high = middle - 1;
+                    }
+                }
+                return index;
+            }
+
+            function onDocumentMouseMove( event ) {
+
+                var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+                var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
+                lon -= movementX * 0.1;
+                lat += movementY * 0.1;
+
+            }
+
+            function onDocumentMouseUp( event ) {
+
+                document.removeEventListener( 'mousemove', onDocumentMouseMove );
+                document.removeEventListener( 'mouseup', onDocumentMouseUp );
+
+            }
 
 		</script>
 	</body>
